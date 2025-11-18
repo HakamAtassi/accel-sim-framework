@@ -36,11 +36,7 @@ else
 	export DEBUG=0
 endif
 
-ifeq ($(DEBUG),1)
-	CXXFLAGS = -Wall -O0 -g3 -fPIC -std=c++17
-else
-	CXXFLAGS = -Wall -O3 -g3 -fPIC -std=c++17
-endif
+CXXFLAGS = -Wall -fno-omit-frame-pointer -fsanitize=address -O3 -g3 -fPIC -std=c++17
 
 CXXFLAGS+=-I./trace-driven -I./trace-parser -I$(GPGPUSIM_ROOT)/libcuda -I$(GPGPUSIM_ROOT)/src -I$(CUDA_INSTALL_PATH)/include -I$(BUILD_DIR)
 
