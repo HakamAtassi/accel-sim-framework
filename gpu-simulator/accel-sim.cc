@@ -1,5 +1,6 @@
 #include "accel-sim.h"
 #include "accelsim_version.h"
+#include "gpgpu-sim/global_vars.h"
 
 accel_sim_framework::accel_sim_framework(std::string config_file,
                                           std::string trace_file) {
@@ -23,11 +24,14 @@ accel_sim_framework::accel_sim_framework(std::string config_file,
 }
 
 accel_sim_framework::accel_sim_framework(int argc, const char **argv) {
+
+  printf("initing gpgpu sim in accel-sim.cc\n");
+
   std::cout << "Accel-Sim [build " << g_accelsim_version << "]";
+
   m_gpgpu_context = new gpgpu_context();
 
-  m_gpgpu_sim =
-      gpgpu_trace_sim_init_perf_model(argc, argv, m_gpgpu_context, &tconfig);
+  m_gpgpu_sim = gpgpu_trace_sim_init_perf_model(argc, argv, m_gpgpu_context, &tconfig);
   m_gpgpu_sim->init();
 
   tracer = trace_parser(tconfig.get_traces_filename());
@@ -36,6 +40,9 @@ accel_sim_framework::accel_sim_framework(int argc, const char **argv) {
 
   init();
 }
+
+
+int current_kernel_uid = 0;
 
 void accel_sim_framework::simulation_loop() {
   // for each kernel
@@ -52,20 +59,32 @@ void accel_sim_framework::simulation_loop() {
     // running
     for (auto k : kernels_info) {
       bool stream_busy = false;
+
       for (auto s : busy_streams) {
         if (s == k->get_cuda_stream_id()) stream_busy = true;
       }
-      if (!stream_busy && m_gpgpu_sim->can_start_kernel() &&
-          !k->was_launched()) {
+
+      if (!stream_busy && m_gpgpu_sim->can_start_kernel() && !k->was_launched()) {
+
+
+      std::string current_kernel_name = k->get_name();
+      custom_memory_stats[k->get_uid()] = json::object();
+      custom_memory_stats[k->get_uid()]["kernel_name"] = current_kernel_name;
+
         std::cout << "launching kernel name: " << k->get_name()
                   << " uid: " << k->get_uid()
                   << " cuda_stream_id: " << k->get_cuda_stream_id()
                   << std::endl;
+
         m_gpgpu_sim->launch(k);
         k->set_launched();
         busy_streams.push_back(k->get_cuda_stream_id());
       }
     }
+
+
+
+
 
     unsigned finished_kernel_uid = simulate();
     // cleanup finished kernel
@@ -87,6 +106,16 @@ void accel_sim_framework::simulation_loop() {
       break;
     }
   }
+
+
+  std::ofstream out("stats.json");
+
+  //custom_memory_stats[derived_kernel_id]["channel_access"] = channel_access;
+
+  out << custom_memory_stats.dump(4);  // pretty print with 4-space indent
+  out.close();
+
+
 }
 
 void accel_sim_framework::parse_commandlist() {
@@ -225,6 +254,7 @@ gpgpu_sim *accel_sim_framework::gpgpu_trace_sim_init_perf_model(
                          m_gpgpu_context->func_sim->g_cuda_launch_blocking);
 
   m_gpgpu_context->the_gpgpusim->g_simulation_starttime = time((time_t *)NULL);
+
 
   return m_gpgpu_context->the_gpgpusim->g_the_gpu;
 }

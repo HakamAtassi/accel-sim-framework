@@ -32,16 +32,19 @@ class accel_sim_framework {
     assert(m_gpgpu_context);
     assert(m_gpgpu_sim);
 
-    concurrent_kernel_sm =
-        m_gpgpu_sim->getShaderCoreConfig()->gpgpu_concurrent_kernel_sm;
+    concurrent_kernel_sm = m_gpgpu_sim->getShaderCoreConfig()->gpgpu_concurrent_kernel_sm;
+
     window_size = concurrent_kernel_sm
                       ? m_gpgpu_sim->get_config().get_max_concurrent_kernel()
                       : 1;
+
     assert(window_size > 0);
     commandlist = tracer.parse_commandlist_file();
 
     kernels_info.reserve(window_size);
   }
+
+
   void simulation_loop();
   void parse_commandlist();
   void cleanup(unsigned finished_kernel);

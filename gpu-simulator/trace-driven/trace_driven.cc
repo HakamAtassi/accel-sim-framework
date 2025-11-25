@@ -506,6 +506,8 @@ void trace_config::set_latency(unsigned category, unsigned &latency,
 }
 
 void trace_gpgpu_sim::createSIMTCluster() {
+
+  //printf("initing m_cluser \n");
   m_cluster = new simt_core_cluster *[m_shader_config->n_simt_clusters];
   for (unsigned i = 0; i < m_shader_config->n_simt_clusters; i++)
     m_cluster[i] =
